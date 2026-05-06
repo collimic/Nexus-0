@@ -1,0 +1,8 @@
+:root { --primary: #2563eb; --bg: #f8fafc; }
+body { font-family: system-ui; background: var(--bg); margin: 0; padding: 0; }
+.navbar { background: var(--primary); color: white; padding: 1rem; display: flex; justify-content: space-between; align-items: center; }
+.card { background: white; margin: 1rem; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+#itemList { list-style: none; padding: 0; }
+#itemList li { padding: 0.5rem 0; border-bottom: 1px solid #eee; }
+input { padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; width: calc(100% - 70px); }
+button { padding: 0.5rem 1rem; cursor: pointer; }

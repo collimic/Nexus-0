@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <title>Nexus-0 Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; --text: #1e293b; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
+        .navbar { background: var(--primary); color: white; padding: 1rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .container { max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
+        .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h2 { margin-top: 0; font-size: 1.25rem; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 1.5rem; }
+        input { flex: 1; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; outline: none; }
+        input:focus { border-color: var(--primary); ring: 2px var(--primary); }
+        button { padding: 0.75rem 1.25rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-outline { background: rgba(255,255,255,0.2); border: 1px solid white; color: white; }
+        button:active { transform: scale(0.98); }
+        ul { list-style: none; padding: 0; margin: 0; }
+        li { padding: 1rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+        li:last-child { border-bottom: none; }
+        .timestamp { font-size: 0.8rem; color: #64748b; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <h1 style="margin:0; font-size: 1.5rem;">Nexus-0</h1>
+        <button id="loginBtn" class="btn-outline">Login</button>
+    </nav>
+    
+    <div class="container">
+        <section class="card">
+            <h2>Activity Log</h2>
+            <div class="input-group">
+                <input type="text" id="newItem" placeholder="Log something new...">
+                <button onclick="addItem()" class="btn-primary">Add</button>
+            </div>
+            <ul id="itemList">
+                </ul>
+        </section>
+    </div>
+
+    <script>
+        // 1. SUPABASE CONFIGURATION
+        const SUPABASE_URL = 'https://wminjyenuywthmfczrfh.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtaW5qeWVudXl3dGhtZmN6cmZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjk4ODQsImV4cCI6MjA5MzY0NTg4NH0.3KBnEtKEDEi66jZnbDi3INA6oaO4bh8PXP7_spCXdJY';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const itemList = document.getElementById('itemList');
+        const loginBtn = document.getElementById('loginBtn');
+
+        // 2. FETCH DATA
+        async function fetchItems() {
+            const { data, error } = await _supabase
+                .from('nexus_items')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Fetch error:', error);
+            } else {
+                itemList.innerHTML = data.map(item => `
+                    <li>
+                        <span>${item.title}</span>
+                        <span class="timestamp">${new Date(item.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </li>
+                `).join('');
+            }
+        }
+
+        // 3. ADD ITEM
+        async function addItem() {
+            const input = document.getElementById('newItem');
+            const title = input.value.trim();
+
+            if (!title) return;
+
+            const { error } = await _supabase
+                .from('nexus_items')
+                .insert([{ title: title }]);
+
+            if (error) {
+                alert("Database Error: " + error.message);
+            } else {
+                input.value = '';
+                fetchItems();
+            }
+        }
+
+        // 4. LOGIN (Magic Link)
+        loginBtn.onclick = async () => {
+            const email = prompt("Enter your email for a Magic Login Link:");
+            if (!email) return;
+
+            const { error } = await _supabase.auth.signInWithOtp({
+                email: email,
+                options: { emailRedirectTo: window.location.origin }
+            });
+
+            if (error) {
+                alert("Login Error: " + error.message);
+            } else {
+                alert("Success! Check your email for the login link.");
+            }
+        };
+
+        // 5. AUTH STATE CHECK
+        _supabase.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                loginBtn.innerText = 'Logged In';
+                loginBtn.disabled = true;
+            }
+        });
+
+        // 6. INITIALIZE
+        fetchItems();
+
+        // 7. PWA SERVICE WORKER
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('PWA Ready'))
+                    .catch(err => console.log('PWA Offline Mode Failed', err));
+            });
+        }
+    </script>
+</body>
+</html>
